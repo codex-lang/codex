@@ -1,0 +1,6 @@
+#include std_io
+
+func testFunc($arg){
+	println("token test");
+	if($test!=$test2){}
+}

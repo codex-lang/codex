@@ -6,6 +6,11 @@ public class TokenInfo {
 	
 	private Object tokenData;
 	
+	public TokenInfo(int token){
+		
+		this(token, null);
+	}
+	
 	public TokenInfo(int token, Object tokenData){
 		
 		this.token = token;
