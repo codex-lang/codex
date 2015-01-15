@@ -1,6 +1,9 @@
 #include std_io
 
 func testFunc($arg){
-	println("token test");
+
+	// Print something to console (this is a comment test)!
+	println("token \n test");
+	
 	if($test!=$test2){}
 }

@@ -3,10 +3,18 @@ package com.lutz.codex.interpreter;
 import java.io.File;
 import java.util.Scanner;
 
+import com.lutz.codex.errors.CodexStackTraceElement;
+import com.lutz.codex.interpreter.errors.SyntaxError;
 import com.lutz.codex.syntax.TokenInfo;
 import com.lutz.codex.syntax.Tokens;
 
 public class CodexInterpreter {
+
+	private static boolean lineComment = false, multiLineComment = false;
+
+	private static CodexTokenList tokenList = new CodexTokenList();
+
+	private static boolean holdEndComment = false, endCommentNext = false;
 
 	public static CodexTokenList parseFileToTokenList(File f) {
 
@@ -19,86 +27,142 @@ public class CodexInterpreter {
 			while (fileReader.hasNextLine()) {
 
 				String value = fileReader.nextLine();
-				
-				if(value.contentEquals("") || value == null){
-					
-					value = "\n";
-				}
-				
+
+				value += "\n";
+
+				System.out.print(value);
+
 				fileContents += value;
 			}
 
 			fileReader.close();
 
-			CodexTokenList tokenList = new CodexTokenList();
-
 			char[] chars = fileContents.toCharArray();
 
-			String currentReading = "";
+			int currentLine = 1;
 
-			String currentReserved = "";
+			String currentRead = "", currentReserved = "";
 
-			TokenInfo savedPrevToken = null;
+			TokenInfo saved = null;
 
-			int currentIndex = 0;
+			for (int currentIndex = 0; currentIndex < chars.length; currentIndex++) {
 
-			while (currentIndex < chars.length) {
+				char c = chars[currentIndex];
 
-				char current = chars[currentIndex];
+				if (Tokens.isReserved(c) || Character.isWhitespace(c)) {
 
-				if (!Tokens.isReserved(current)
-						&& !Character.isWhitespace(current)) {
+					if (!currentRead.contentEquals("")) {
 
-					currentReserved = currentReserved.trim();
+						TokenInfo save = new TokenInfo(Tokens.STRING_VALUE,
+								currentRead.trim());
 
-					if (!currentReserved.contentEquals("")) {
+						addToken(save);
 
-						TokenInfo ti = Tokens
-								.parseReservedCharToken(currentReserved);
+						currentRead = "";
+					}
 
-						if (ti.getToken() != Tokens.UNKNOWN) {
+					if (!Character.isWhitespace(c)) {
 
-							tokenList.addToken(ti);
+						currentReserved += c;
 
-							currentReserved = "";
+						TokenInfo save = Tokens
+								.parseReservedCharToken(currentReserved.trim());
+
+						if (save.getToken() != Tokens.UNKNOWN) {
+
+							saved = save;
+
+						} else if (saved != null) {
+
+							addToken(saved);
+
+							saved = null;
+
+							currentReserved = Character.toString(c);
+
+							TokenInfo newSave = Tokens
+									.parseReservedCharToken(Character
+											.toString(c));
+
+							if (newSave.getToken() != Tokens.UNKNOWN) {
+
+								saved = newSave;
+							}
 
 						} else {
 
-							tokenList.addToken(savedPrevToken);
+							SyntaxError error = new SyntaxError(
+									"Unknown syntax token '"
+											+ currentReserved.trim() + "'");
 
-							currentReserved = Character.toString(current);
+							error.addStackTraceElement(new CodexStackTraceElement(
+									currentLine, "<parse tokens>", f.getName()
+											.substring(
+													0,
+													f.getName()
+															.lastIndexOf('.'))));
+
+							error.throwError();
 						}
 					}
-
-					currentReading += current;
 
 				} else {
 
-					currentReading = currentReading.trim();
+					if (!currentReserved.contentEquals("")) {
 
-					if (!currentReading.contentEquals("")) {
-
-						tokenList.addToken(new TokenInfo(Tokens.STRING_VALUE,
-								currentReading));
-
-						currentReading = "";
-					}
-
-					if (!Character.isWhitespace(current)) {
-
-						currentReserved += current;
-
-						TokenInfo toSave = Tokens
+						TokenInfo save = Tokens
 								.parseReservedCharToken(currentReserved.trim());
 
-						if (toSave.getToken() != Tokens.UNKNOWN) {
+						if (save.getToken() != Tokens.UNKNOWN) {
 
-							savedPrevToken = toSave;
+							addToken(save);
+
+							saved = null;
+
+							currentReserved = "";
+
+						} else if (saved != null) {
+
+							addToken(saved);
+
+							currentReserved = "";
+
+							saved = null;
+
+						} else {
+
+							SyntaxError error = new SyntaxError(
+									"Unknown syntax token '"
+											+ currentReserved.trim() + "'");
+
+							error.addStackTraceElement(new CodexStackTraceElement(
+									currentLine, "<parse tokens>", f.getName()
+											.substring(
+													0,
+													f.getName()
+															.lastIndexOf('.'))));
+
+							error.throwError();
 						}
 					}
+
+					currentRead += c;
 				}
 
-				currentIndex++;
+				if (c == '\n' || c == '\r') {
+
+					currentLine++;
+
+					if (lineComment) {
+
+						endCommentNext = true;
+					}
+				}
+			}
+
+			if (saved != null) {
+
+				addToken(saved);
 			}
 
 			return tokenList;
@@ -109,5 +173,109 @@ public class CodexInterpreter {
 
 			return null;
 		}
+	}
+
+	private static void addToken(TokenInfo info) {
+
+		if (!lineComment && !multiLineComment) {
+
+			if (info.getToken() == Tokens.LINE_COMMENT) {
+
+				lineComment = true;
+
+				return;
+
+			} else if (info.getToken() == Tokens.MULTILINE_COMMENT_OPEN) {
+
+				multiLineComment = true;
+
+				return;
+
+			}
+
+			tokenList.addToken(info);
+
+		} else {
+
+			if (info.getToken() == Tokens.MULTILINE_COMMENT_CLOSE) {
+
+				multiLineComment = false;
+
+				return;
+			}
+
+			if (endCommentNext) {
+
+				endCommentNext = false;
+
+				if (lineComment) {
+
+					lineComment = false;
+				}
+			}
+		}
+	}
+
+	public static CodexTokenList parseSecondLevel(CodexTokenList list) {
+
+		CodexTokenList result = new CodexTokenList();
+
+		while (list.hasNextToken()) {
+
+			TokenInfo t = list.getNextToken();
+
+			if (t.getToken() == Tokens.STRING_VALUE) {
+
+				if (t.getTokenData().toString().equals("if")) {
+
+					result.addToken(new TokenInfo(Tokens.IF_DEF));
+
+				} else if (t.getTokenData().toString().equals("for")) {
+
+					result.addToken(new TokenInfo(Tokens.FOR_LOOP_DEF));
+
+				} else if (t.getTokenData().toString().equals("while")) {
+
+					result.addToken(new TokenInfo(Tokens.WHILE_LOOP_DEF));
+
+				} else {
+
+					result.addToken(t);
+				}
+
+			} else if (t.getToken() == Tokens.HASH_SYMBOL) {
+
+				if (list.isNextToken(Tokens.STRING_VALUE)) {
+
+					if (list.isNextTokenData("include")) {
+
+						list.getNextToken();
+
+						result.addToken(new TokenInfo(Tokens.INCLUDE_DEF));
+						
+					}else{
+						
+						result.addToken(t);
+					}					
+					
+				}else{
+					
+					result.addToken(t);
+				}
+
+			} else {
+
+				result.addToken(t);
+			}
+		}
+
+		return result;
+	}
+
+	public static void reset() {
+
+		lineComment = false;
+		multiLineComment = false;
+		tokenList = new CodexTokenList();
 	}
 }

@@ -4,62 +4,89 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import com.lutz.codex.syntax.Token;
 import com.lutz.codex.syntax.TokenInfo;
 
 public class CodexTokenList implements Iterable<TokenInfo> {
 
 	private List<TokenInfo> tokens = new ArrayList<TokenInfo>();
-	
+
 	private int currentTokenIndex = 0;
-	
-	public void addToken(int token){
-		
+
+	public void addToken(Token token) {
+
 		addToken(new TokenInfo(token));
 	}
-	
-	public void addToken(TokenInfo info){
-		
+
+	public void addToken(TokenInfo info) {
+
 		tokens.add(info);
 	}
-	
-	public TokenInfo[] getTokens(){
-		
-		return tokens.toArray(new TokenInfo[]{});
+
+	public TokenInfo[] getTokens() {
+
+		return tokens.toArray(new TokenInfo[] {});
 	}
-	
-	public TokenInfo getToken(int index){
-		
-		if(index < tokens.size()){
-			
+
+	public TokenInfo getToken(int index) {
+
+		if (index < tokens.size()) {
+
 			return tokens.get(index);
-			
-		}else{
-			
+
+		} else {
+
 			return null;
 		}
 	}
-	
-	public boolean hasNextToken(){
-		
+
+	public boolean hasNextToken() {
+
 		return currentTokenIndex < tokens.size();
 	}
-	
-	public TokenInfo getNextToken(){
-		
-		if(currentTokenIndex < tokens.size()){
-		
+
+	public TokenInfo getNextToken() {
+
+		if (currentTokenIndex < tokens.size()) {
+
+			TokenInfo t = tokens.get(currentTokenIndex);
+
 			currentTokenIndex++;
-			
-			return tokens.get(currentTokenIndex);
-			
-		}else{
-			
+
+			return t;
+
+		} else {
+
 			return null;
 		}
 	}
-	
-	public void resetTokenIndex(){
-		
+
+	public boolean isNextToken(Token token) {
+
+		if (currentTokenIndex < tokens.size() - 1) {
+
+			return tokens.get(currentTokenIndex - 1).getToken() == token;
+
+		} else {
+
+			return false;
+		}
+	}
+
+	public boolean isNextTokenData(Object value) {
+
+		if (currentTokenIndex < tokens.size() - 1) {
+
+			return tokens.get(currentTokenIndex - 1).getTokenData() == value;
+
+		} else {
+
+			return false;
+		}
+	}
+
+	public void resetTokenIndex() {
+
 		currentTokenIndex = 0;
 	}
 

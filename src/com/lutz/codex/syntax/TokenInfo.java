@@ -2,28 +2,28 @@ package com.lutz.codex.syntax;
 
 public class TokenInfo {
 
-	private int token;
-	
+	private Token token;
+
 	private Object tokenData;
-	
-	public TokenInfo(int token){
-		
+
+	public TokenInfo(Token token) {
+
 		this(token, null);
 	}
-	
-	public TokenInfo(int token, Object tokenData){
-		
+
+	public TokenInfo(Token token, Object tokenData) {
+
 		this.token = token;
 		this.tokenData = tokenData;
 	}
-	
-	public int getToken(){
-		
+
+	public Token getToken() {
+
 		return token;
 	}
-	
-	public Object getTokenData(){
-		
+
+	public Object getTokenData() {
+
 		return tokenData;
 	}
 }

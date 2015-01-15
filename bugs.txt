@@ -1,3 +1,2 @@
 ===[ BUGS ]===
 
-1. Interpreter not reading concurrent reserved characters: i.e. ($ or ){
