@@ -1,2 +1,6 @@
 ===[ BUGS ]===
 
+<<<<<<< HEAD
+=======
+1. Interpreter not reading consecutive reserved characters: i.e. ($ or ){
+>>>>>>> origin/master
